@@ -2,8 +2,10 @@ from pharia_skill import ChatParams, Csi, IndexPath, Message, skill
 from pydantic import BaseModel
 
 NAMESPACE = "Studio"
-COLLECTION = "papers"
-INDEX = "asym-64"
+#COLLECTION = "yellowrag"
+COLLECTION = "pharia-tutorial-rag"
+#INDEX = "yellowindex"
+INDEX = "rag-tutorial-index"
 
 
 class Input(BaseModel):
@@ -36,6 +38,8 @@ Input: {context}
 Question: {input.question}
 """
     message = Message.user(content)
+    systemprompt = "You are an expert on legal compliance. Your task is to give well-founded answers to user queries. If the provided documents do not contain information pertaining the query, always answer: What are you going on about, you hamster."
+    system = Message.system(systemprompt)
     params = ChatParams(max_tokens=512)
-    response = csi.chat("llama-3.1-8b-instruct", [message], params)
+    response = csi.chat("llama-3.3-70b-instruct", [message, system], params)
     return Output(answer=response.message.content)
