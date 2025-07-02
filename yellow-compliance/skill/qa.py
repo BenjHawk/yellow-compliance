@@ -1,3 +1,4 @@
+import json
 from pharia_skill import ChatParams, Csi, IndexPath, Message, SearchResult, skill
 from pydantic import BaseModel
 
@@ -7,7 +8,27 @@ INDEX = "yellowindex"
 SYSTEM_PROMPT = """
 You are an expert on legal compliance. 
 Your task is to give well-founded answers to user queries.
-Always provide a refference to the 
+Always provide a refference to the retrieved documents, if there are any.
+Structure the output like:
+
+**Answer**
+answer text
+
+**Reference**
+list of refferences to documents as
+"DocumentID": value
+"PassageID": value
+"Summarization of Passage": summarization
+---
+"DocumentID": value
+"PassageID": value
+"Summarization of Passage": summarization
+---
+...
+---
+"DocumentID": value
+"PassageID": value
+"Summarization of Passage": summarization
 """
 
 
@@ -66,7 +87,9 @@ def custom_rag(csi: Csi, input: Input) -> Output:
         return Output(answer=response.message.content, documents=None)
 
 
-    context = "\n".join([d.content for d in documents])
+    documents_metadata = csi.documents_metadata([d.document_path for d in documents])
+
+    context = "\n".join([d.content + json.dumps(m) for d,m in zip(documents,documents_metadata)])
     message = Message.user(get_content_success(context, input.question))
     params = ChatParams(max_tokens=512)
     response = csi.chat("llama-3.3-70b-instruct", [message, system], params)
