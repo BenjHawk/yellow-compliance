@@ -1,11 +1,11 @@
-from pharia_skill import ChatParams, Csi, IndexPath, Message, skill
+from pharia_skill import ChatParams, Csi, IndexPath, Message, SearchResult, skill
 from pydantic import BaseModel
 
 NAMESPACE = "Studio"
-#COLLECTION = "yellowrag"
-COLLECTION = "pharia-tutorial-rag"
-#INDEX = "yellowindex"
-INDEX = "rag-tutorial-index"
+COLLECTION = "yellowrag"
+#COLLECTION = "pharia-tutorial-rag"
+INDEX = "yellowindex"
+#INDEX = "rag-tutorial-index"
 
 
 class Input(BaseModel):
@@ -17,6 +17,7 @@ class Input(BaseModel):
 
 class Output(BaseModel):
     answer: str | None
+    documents: list[SearchResult] | None
 
 
 @skill
@@ -28,13 +29,15 @@ def custom_rag(csi: Csi, input: Input) -> Output:
     )
 
     systemprompt = """You are an expert on legal compliance. 
-Your task is to give well-founded answers to user queries. 
-If the provided documents do not contain information pertaining the query, always answer: What are you going on about, you hamster.
+Your task is to give well-founded answers to user queries.
+Always provide a refference to the 
 """
+#If the provided documents do not contain information pertaining the query, always answer: What are you going on about, you hamster.
+
     system = Message.system(systemprompt)
 
 
-    if not (documents := csi.search(index, input.question, 3, 0.5)):
+    if not (documents := csi.search(index, input.question, 3, 0.0)):
         content = f"""
 No documents could be retrieved matching the users query.
 Use your knowledge to explain to the user what might be a reason for the fact, that his question can't be answered.
@@ -46,7 +49,7 @@ Question: {input.question}
         message = Message.user(content)
         params = ChatParams(max_tokens=512)
         response = csi.chat("llama-3.3-70b-instruct", [message, system], params)
-        return Output(answer=response.message.content)
+        return Output(answer=response.message.content, documents=None)
 
 
     context = "\n".join([d.content for d in documents])
@@ -64,4 +67,4 @@ Question: {input.question}
     message = Message.user(content)
     params = ChatParams(max_tokens=512)
     response = csi.chat("llama-3.3-70b-instruct", [message, system], params)
-    return Output(answer=response.message.content)
+    return Output(answer=response.message.content, documents=documents)
