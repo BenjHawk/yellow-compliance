@@ -21,7 +21,7 @@ async def qa(
     skill = Skill(namespace="customer-playground", name="qa-yellow-compliance") #qa-yellow-compliance
     try:
         response = await kernel.run(skill, token, await request.json())
-        print(response.documents)
+        print(response['documents'])
         return response
     except KernelException as exp:
         error_message = ",".join(exp.args)
